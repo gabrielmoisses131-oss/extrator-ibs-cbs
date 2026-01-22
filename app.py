@@ -459,39 +459,106 @@ def _parse_items_from_xml(xml_bytes: bytes, filename: str) -> list[dict]:
 def _append_to_workbook(template_bytes: bytes, df: pd.DataFrame) -> bytes:
     """
     Abre o template e grava df na aba LANCAMENTOS, acrescentando linhas.
-    Mantém fórmulas e formatações existentes.
+
+    ✅ O que este writer garante:
+      - Encontra a linha correta de cabeçalhos mesmo que o layout mude (ex.: cabeçalho na linha 2).
+      - Escreve nos campos de entrada (Data, Numero, Item/Serviço, etc.).
+      - COPIA fórmulas/estilos da primeira linha-modelo de dados para todas as novas linhas,
+        para que "Base", "Valor IBS/CBS", validações e cálculos voltem a aparecer no Excel.
     """
+    from copy import copy
     bio = io.BytesIO(template_bytes)
     wb = load_workbook(bio)
-    if "LANCAMENTOS" not in wb.sheetnames:
-        # fallback: tenta primeira aba
-        ws = wb.active
-    else:
-        ws = wb["LANCAMENTOS"]
 
-    # Descobre cabeçalho na primeira linha: mapeia nomes para colunas
-    header_row = 1
-    headers = {}
-    for col in range(1, ws.max_column + 1):
+    ws = wb["LANCAMENTOS"] if "LANCAMENTOS" in wb.sheetnames else wb.active
+
+    # ------------------------------------------------------------
+    # 1) Descobre em qual linha estão os cabeçalhos (layout pode mudar)
+    # ------------------------------------------------------------
+    expected = {"Data", "Numero", "Item/Serviço", "cClassTrib", "Valor da operação"}
+    header_row = None
+
+    # procura nos primeiros 25 rows (suficiente pro seu layout)
+    for r in range(1, 26):
+        values = []
+        for c in range(1, 101):  # lê até 100 colunas (bem além do necessário)
+            v = ws.cell(row=r, column=c).value
+            if isinstance(v, str):
+                values.append(v.strip())
+        hit = len(expected.intersection(values))
+        if hit >= 3:  # achou linha com a maioria dos cabeçalhos
+            header_row = r
+            break
+
+    if header_row is None:
+        # fallback antigo (assume linha 1)
+        header_row = 1
+
+    # mapeia "nome do cabeçalho" -> coluna
+    headers: dict[str, int] = {}
+    last_col = 0
+    for col in range(1, 201):  # até 200 colunas
         v = ws.cell(row=header_row, column=col).value
         if isinstance(v, str) and v.strip():
             headers[v.strip()] = col
+            last_col = max(last_col, col)
 
-    # Campos que vamos preencher (se existirem)
-    fields = ["Data", "Numero", "Item/Serviço", "cClassTrib", "Valor da operação", "vIBS", "vCBS", "arquivo", "Fonte do valor"]
+    # se ainda não achou nada (planilha muito custom), tenta usar as colunas usadas do sheet
+    if last_col == 0:
+        last_col = min(ws.max_column, 200)
 
-    # próxima linha vazia (considera que a planilha pode ter fórmulas/linhas em branco)
+    # ------------------------------------------------------------
+    # 2) Define a "linha modelo" (a primeira linha de dados com fórmulas)
+    #    No seu modelo: header_row=2, a linha 3 é seção, a 4 é a linha modelo.
+    # ------------------------------------------------------------
+    template_row = header_row + 2
+
+    # ------------------------------------------------------------
+    # 3) Descobre a próxima linha vazia olhando a coluna "Data"
+    # ------------------------------------------------------------
     next_row = ws.max_row + 1
-    # tenta achar a última linha com algo na coluna "Data" (se existir)
     if "Data" in headers:
         c = headers["Data"]
         r = ws.max_row
-        while r >= 2 and ws.cell(row=r, column=c).value in (None, ""):
+        while r >= (template_row) and ws.cell(row=r, column=c).value in (None, ""):
             r -= 1
-        next_row = max(r + 1, 2)
+        next_row = max(r + 1, template_row)
 
-    # escreve as linhas
+    # ------------------------------------------------------------
+    # 4) Função para copiar estilo + fórmulas da linha modelo
+    # ------------------------------------------------------------
+    def _copy_row_style_and_formulas(src_row: int, dst_row: int):
+        from copy import copy
+        for col in range(1, last_col + 1):
+            src = ws.cell(row=src_row, column=col)
+            dst = ws.cell(row=dst_row, column=col)
+
+            # estilos
+            dst.font = copy(src.font)
+            dst.fill = copy(src.fill)
+            dst.border = copy(src.border)
+            dst.alignment = copy(src.alignment)
+            dst.number_format = src.number_format
+            dst.protection = copy(src.protection)
+
+            # fórmula
+            if isinstance(src.value, str) and src.value.startswith("="):
+                dst.value = src.value
+
+
+    # ------------------------------------------------------------
+    # 5) Escreve as linhas: primeiro replica modelo, depois grava os valores de entrada
+    # ------------------------------------------------------------
+    fields = [
+        "Data", "Numero", "Item/Serviço", "cClassTrib",
+        "Valor da operação", "vIBS", "vCBS", "arquivo", "Fonte do valor"
+    ]
+
     for _, row in df.iterrows():
+        # replica a linha modelo (fórmulas + visual)
+        _copy_row_style_and_formulas(template_row, next_row)
+
+        # agora sobrescreve somente os campos de ENTRADA
         for f in fields:
             if f not in headers:
                 continue
@@ -499,15 +566,16 @@ def _append_to_workbook(template_bytes: bytes, df: pd.DataFrame) -> bytes:
             val = row.get(f, None)
 
             cell = ws.cell(row=next_row, column=col)
-            # datas: escreve como date
+
+            # datas
             if f == "Data" and pd.notna(val) and isinstance(val, date):
                 cell.value = val
-                cell.number_format = "yyyy-mm-dd"
+                cell.number_format = "dd/mm/yyyy"
             else:
-                # pandas NaN -> None
                 if pd.isna(val):
                     val = None
                 cell.value = val
+
         next_row += 1
 
     out = io.BytesIO()
