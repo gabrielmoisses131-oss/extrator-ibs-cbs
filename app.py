@@ -633,7 +633,7 @@ with st.sidebar:
 
   <div class="sidebar-card">
 <div class="sidebar-title">
-<h4>PLANILHA MODELO</h4>
+<h4>PLANILHA IBS/CBS</h4>
 <span class="tag">FIXA</span>
 </div>
 
