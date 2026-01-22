@@ -357,6 +357,92 @@ section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button{
   margin-top: 10px;
 }
 
+
+/* ===== GLOW NO CONTORNO DOS KPIs (hover por cor) ===== */
+.kpi{
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+
+/* IBS - azul */
+.kpi.kpi-ibs:hover{
+  box-shadow:
+    0 26px 70px rgba(2,6,23,.16),
+    0 0 0 1px rgba(37,99,235,.25),
+    0 0 22px rgba(37,99,235,.35),
+    0 0 60px rgba(37,99,235,.18) !important;
+}
+
+/* CBS - verde */
+.kpi.kpi-cbs:hover{
+  box-shadow:
+    0 26px 70px rgba(2,6,23,.16),
+    0 0 0 1px rgba(22,163,74,.25),
+    0 0 22px rgba(22,163,74,.35),
+    0 0 60px rgba(22,163,74,.18) !important;
+}
+
+/* Créditos - laranja */
+.kpi.kpi-cred:hover{
+  box-shadow:
+    0 26px 70px rgba(2,6,23,.16),
+    0 0 0 1px rgba(245,158,11,.30),
+    0 0 22px rgba(245,158,11,.40),
+    0 0 60px rgba(245,158,11,.18) !important;
+}
+
+/* Total - roxo */
+.kpi.kpi-total:hover{
+  box-shadow:
+    0 26px 70px rgba(2,6,23,.16),
+    0 0 0 1px rgba(124,58,237,.28),
+    0 0 22px rgba(124,58,237,.38),
+    0 0 60px rgba(124,58,237,.18) !important;
+}
+
+
+/* ===== GLOW NOS PAINÉIS DE DÉBITOS x CRÉDITOS ===== */
+.card{
+  transition: box-shadow .25s ease, transform .25s ease, border-color .25s ease;
+}
+
+/* IBS painel (azul) */
+.card.ibs-panel:hover{
+  box-shadow:
+    0 20px 55px rgba(2,6,23,.18),
+    0 0 0 1px rgba(37,99,235,.22),
+    0 0 26px rgba(37,99,235,.30),
+    0 0 70px rgba(37,99,235,.16) !important;
+}
+
+/* CBS painel (verde) */
+.card.cbs-panel:hover{
+  box-shadow:
+    0 20px 55px rgba(2,6,23,.18),
+    0 0 0 1px rgba(22,163,74,.22),
+    0 0 26px rgba(22,163,74,.30),
+    0 0 70px rgba(22,163,74,.16) !important;
+}
+
+
+/* ===== GLOW NA SIDEBAR (neon suave) ===== */
+section[data-testid="stSidebar"]{
+  box-shadow:
+    0 30px 80px rgba(2,6,23,.45),
+    0 0 0 1px rgba(99,102,241,.20),
+    0 0 28px rgba(99,102,241,.35),
+    0 0 90px rgba(99,102,241,.18) !important;
+  transition: box-shadow .3s ease;
+}
+
+/* Intensifica levemente ao passar o mouse */
+section[data-testid="stSidebar"]:hover{
+  box-shadow:
+    0 35px 95px rgba(2,6,23,.55),
+    0 0 0 1px rgba(99,102,241,.28),
+    0 0 36px rgba(99,102,241,.45),
+    0 0 120px rgba(99,102,241,.22) !important;
+}
+
 </style>
 """
 
@@ -907,7 +993,7 @@ max_cbs = max(cbs_deb, cbs_cred, 1e-9)
 with c1:
     st.markdown(
         f"""
-<div class="card">
+<div class="card ibs-panel">
   <div class="panel-title">
 <div class="panel-left">
 <div class="icon" aria-hidden="true">
@@ -947,7 +1033,7 @@ with c1:
 with c2:
     st.markdown(
         f"""
-<div class="card">
+<div class="card cbs-panel">
   <div class="panel-title">
 <div class="panel-left">
 <div class="icon" aria-hidden="true">
