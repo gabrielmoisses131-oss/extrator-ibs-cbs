@@ -62,26 +62,30 @@ CSS = """
 h1,h2,h3,h4,h5,h6{ color: var(--ink) !important; letter-spacing: -.02em; }
 p,li,span,small,.stCaption{ color: var(--muted) !important; }
 
-/* Sidebar */
+/* Sidebar (coluna arredondada estilo app) */
 section[data-testid="stSidebar"]{
-  background:
-    radial-gradient(800px 520px at 30% 0%, rgba(37,99,235,.35), transparent 50%),
-    radial-gradient(800px 520px at 70% 80%, rgba(124,58,237,.35), transparent 55%),
-    #0b1220 !important;
+  background: radial-gradient(800px 520px at 30% 0%, rgba(37,99,235,.35), transparent 50%),
+              radial-gradient(800px 520px at 70% 80%, rgba(124,58,237,.35), transparent 55%),
+              #0b1220 !important;
 
-  /* App-like floating panel */
+  /* Contorno + formato de “painel” */
   border: 1px solid rgba(255,255,255,.12) !important;
   border-radius: 22px !important;
+  box-shadow: 0 20px 55px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.05) !important;
+
+  /* Respiro para parecer coluna flutuante */
   margin: 12px !important;
-  padding: 6px !important;
-
-  box-shadow:
-    0 20px 50px rgba(0,0,0,.35),
-    inset 0 0 0 1px rgba(255,255,255,.05);
-
-  transition: all .25s ease;
+  overflow: hidden !important;
 }
 
+/* Garante que o conteúdo interno respeite o arredondado e ocupe a altura toda */
+section[data-testid="stSidebar"] > div{
+  border-radius: 22px !important;
+  overflow: hidden !important;
+  height: calc(100vh - 24px) !important;
+}
+
+/* Texto/cores dentro da sidebar */
 section[data-testid="stSidebar"] *{ color: rgba(255,255,255,.92) !important; }
 section[data-testid="stSidebar"] .stCaption,
 section[data-testid="stSidebar"] small{ color: rgba(255,255,255,.65) !important; }
