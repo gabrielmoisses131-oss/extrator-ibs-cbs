@@ -529,6 +529,8 @@ def _append_to_workbook(template_bytes: bytes, df: pd.DataFrame) -> bytes:
     # ------------------------------------------------------------
     def _copy_row_style_and_formulas(src_row: int, dst_row: int):
         from copy import copy
+        from openpyxl.formula.translate import Translator
+
         for col in range(1, last_col + 1):
             src = ws.cell(row=src_row, column=col)
             dst = ws.cell(row=dst_row, column=col)
@@ -541,8 +543,14 @@ def _append_to_workbook(template_bytes: bytes, df: pd.DataFrame) -> bytes:
             dst.number_format = src.number_format
             dst.protection = copy(src.protection)
 
-            # fórmula
+            # valor / fórmula
             if isinstance(src.value, str) and src.value.startswith("="):
+                # traduz a referência da linha-modelo -> linha destino (ex.: G4 vira G7)
+                try:
+                    dst.value = Translator(src.value, origin=src.coordinate).translate_formula(dst.coordinate)
+                except Exception:
+                    dst.value = src.value
+            else:
                 dst.value = src.value
 
 
