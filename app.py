@@ -16,6 +16,7 @@ import xml.etree.ElementTree as ET
 
 import pandas as pd
 import streamlit as st
+import html
 import time
 from openpyxl import load_workbook
 from textwrap import dedent
@@ -809,6 +810,187 @@ section[data-testid="stFileUploaderDropzone"]:has([data-testid="stFileUploaderFi
   filter: drop-shadow(0 10px 22px rgba(34,197,94,.40)) !important;
 }
 
+
+/* ===== DOC TABLE PREMIUM (igual print) ===== */
+.doc-table-wrap{
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 18px;
+  box-shadow: 0 18px 45px rgba(2,6,23,.10);
+  padding: 14px;
+  overflow: hidden;
+}
+
+.doc-table{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.doc-table thead th{
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 900;
+  color: rgba(100,116,139,.92);
+  background: rgba(248,250,252,.95);
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(15,23,42,.10);
+  text-align: left;
+}
+
+.doc-table tbody td{
+  font-size: 12px;
+  color: rgba(15,23,42,.92);
+  padding: 12px 12px;
+  border-bottom: 1px solid rgba(15,23,42,.07);
+  vertical-align: middle;
+}
+
+.doc-table tbody tr:hover td{
+  background: rgba(37,99,235,.04);
+}
+
+.doc-table .col-item{
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.doc-table .col-money{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-table .col-vibs{
+  text-align: right;
+  color: #2563eb;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-table .col-vcbs{
+  text-align: right;
+  color: #16a34a;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-table .col-file{
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(71,85,105,.95);
+}
+
+.cclass-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 10.5px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 900;
+  color: rgba(30,64,175,.95);
+  background: rgba(37,99,235,.10);
+  border: 1px solid rgba(37,99,235,.18);
+}
+
+.doc-table-foot{
+  margin-top: 10px;
+  font-size: .80rem;
+  color: rgba(100,116,139,.95);
+}
+
+
+/* ===== DOC TABLE: ALTURA FIXA + SCROLL (não estica a página) ===== */
+.doc-table-wrap{
+  max-height: 520px !important;
+  overflow: auto !important;
+}
+
+/* mantém cabeçalho “grudado” ao rolar */
+.doc-table thead th{
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 2 !important;
+}
+
+/* Item/Serviço menos “grosso” */
+.doc-table .col-item{
+  font-weight: 800 !important;
+}
+
+/* scrollbar elegante */
+.doc-table-wrap::-webkit-scrollbar{ width: 10px; height: 10px; }
+.doc-table-wrap::-webkit-scrollbar-thumb{
+  background: rgba(15,23,42,.14);
+  border-radius: 999px;
+}
+.doc-table-wrap::-webkit-scrollbar-track{
+  background: rgba(15,23,42,.05);
+  border-radius: 999px;
+}
+
+
+/* ===== AJUSTES FINOS (data sem quebrar + espaço botão + chip arquivo bonito) ===== */
+
+/* Data e Número: não quebrar */
+.doc-table .col-date,
+.doc-table .col-num{
+  white-space: nowrap !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* Também garante nas células, caso classe não esteja aplicada */
+.doc-table tbody td.col-date,
+.doc-table tbody td.col-num{
+  white-space: nowrap !important;
+}
+
+/* Espaço pro botão “Baixar CSV filtrado” não encostar na tabela */
+.table-download-spacer{
+  height: 14px;
+}
+
+/* Chip do arquivo carregado (sidebar) – versão bonita compacta */
+section[data-testid="stSidebar"] [data-testid="stFileUploaderFile"]{
+  background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06)) !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+  border-radius: 12px !important;
+  padding: 6px 10px !important;
+  margin-top: 8px !important;
+  box-shadow:
+    0 12px 28px rgba(0,0,0,.22),
+    0 0 0 1px rgba(37,99,235,.10) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] *{
+  color: rgba(226,232,240,.92) !important;
+  line-height: 1.15 !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] svg{
+  width: 16px !important;
+  height: 16px !important;
+  color: rgba(59,130,246,.95) !important;
+  fill: rgba(59,130,246,.95) !important;
+  filter: drop-shadow(0 8px 18px rgba(59,130,246,.18));
+}
+
+section[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] button{
+  border-radius: 8px !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  background: rgba(255,255,255,.08) !important;
+  padding: 3px 6px !important;
+}
+
+section[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] button:hover{
+  filter: brightness(1.12) !important;
+  background: rgba(255,255,255,.12) !important;
+}
+
 </style>
 """
 
@@ -1270,6 +1452,84 @@ def pct(x):
         return ""
 
 
+def _fmt_money_br(x):
+    try:
+        if x is None or (isinstance(x, float) and pd.isna(x)):
+            return "0,00"
+        return "{:,.2f}".format(float(x)).replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return "0,00"
+
+def _h(x):
+    # escape for safe HTML rendering (keeps text)
+    try:
+        return html.escape("" if x is None else str(x))
+    except Exception:
+        return ""
+
+def _clean_html(s: str) -> str:
+    # Remove indentation that can turn HTML into a markdown code block
+    return "\n".join(line.lstrip() for line in s.splitlines() if line.strip())
+
+def _render_doc_table(df: pd.DataFrame, total_items: int | None = None):
+    """
+    Renderiza tabela premium (HTML) no estilo do print.
+    """
+    if df is None or df.empty:
+        st.info("Nenhum item para exibir.")
+        return
+
+    total = total_items if total_items is not None else len(df)
+
+    rows = []
+    for _, r in df.iterrows():
+        data = _h(r.get("Data", ""))
+        numero = _h(r.get("Numero", ""))
+        item = _h(r.get("Item/Serviço", ""))
+        cclass = _h(r.get("cClassTrib", ""))
+        valor = _fmt_money_br(r.get("Valor da operação", 0))
+        vibs = _fmt_money_br(r.get("vIBS", 0))
+        vcbs = _fmt_money_br(r.get("vCBS", 0))
+        arquivo = _h(r.get("arquivo", ""))
+
+        rows.append(f"""
+<tr>
+  <td class="col-date">{data}</td>
+  <td class="col-num">{numero}</td>
+  <td class="col-item">{item}</td>
+  <td class="col-cclass"><span class="cclass-badge">{cclass}</span></td>
+  <td class="col-money">{valor}</td>
+  <td class="col-vibs">{vibs}</td>
+  <td class="col-vcbs">{vcbs}</td>
+  <td class="col-file" title="{arquivo}">{arquivo}</td>
+</tr>
+""")
+
+    html_block = f"""
+<div class="doc-table-wrap">
+  <table class="doc-table">
+    <thead>
+      <tr>
+        <th>DATA</th>
+        <th>NÚMERO</th>
+        <th>ITEM/SERVIÇO</th>
+        <th>cClassTrib</th>
+        <th>VALOR DA OPERAÇÃO</th>
+        <th>vIBS</th>
+        <th>vCBS</th>
+        <th>ARQUIVO</th>
+      </tr>
+    </thead>
+    <tbody>
+      {''.join(rows)}
+    </tbody>
+  </table>
+  <div class="doc-table-foot">Mostrando {len(df)} de {total} itens</div>
+</div>
+"""
+    st.markdown(_clean_html(html_block), unsafe_allow_html=True)
+
+
 # --- Totais (Somatório das bases do XML) ---
 # Aqui os painéis mostram apenas a SOMA DAS BASES encontradas no XML (sem aplicar alíquota).
 # As alíquotas exibidas são apenas informativas (fictícias), como você pediu.
@@ -1563,13 +1823,8 @@ show_cols = [c for c in show_cols if c in df_view.columns]
 # ===== TABELA PREMIUM (igual vídeo) =====
 st.markdown('<div class="table-wrap">', unsafe_allow_html=True)
 
-st.dataframe(
-    df_view[show_cols],
-    use_container_width=True,
-    hide_index=True,
-    height=420
-)
-
+_render_doc_table(df_view[show_cols], total_items=len(df_view))
+st.markdown('<div class="table-download-spacer"></div>', unsafe_allow_html=True)
 st.download_button(
     "Baixar CSV filtrado",
     data=df_view[show_cols].to_csv(index=False).encode("utf-8"),
@@ -1620,4 +1875,3 @@ else:
                 file_name="planilha_preenchida.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
-
