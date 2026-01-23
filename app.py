@@ -16,6 +16,7 @@ import xml.etree.ElementTree as ET
 
 import pandas as pd
 import streamlit as st
+import time
 from openpyxl import load_workbook
 from textwrap import dedent
 
@@ -443,10 +444,419 @@ section[data-testid="stSidebar"]:hover{
     0 0 120px rgba(99,102,241,.22) !important;
 }
 
+
+
+/* ===== LOADER (UIVERSE SVG) – 4 CORES (IGUAL AOS CARDS) ===== */
+:root{
+  --ibs:#2563eb;   /* azul IBS */
+  --cbs:#16a34a;   /* verde CBS */
+  --cred:#f59e0b;  /* laranja Créditos */
+  --total:#7c3aed; /* roxo Total */
+}
+
+/* some o ícone verde padrão */
+div[data-testid="stStatusWidget"] { display:none !important; }
+
+/* overlay premium */
+.spinner-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(15,23,42,.22);
+  backdrop-filter: blur(6px);
+}
+
+.spinner-card{
+  width: min(520px, calc(100vw - 40px));
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.78));
+  border: 1px solid rgba(15,23,42,.10);
+  box-shadow: 0 26px 70px rgba(2,6,23,.22);
+  display:flex;
+  align-items:center;
+  gap: 14px;
+}
+
+.pl{ width: 64px; height: 64px; flex: 0 0 auto; }
+
+.pl__ring{ animation: ringA var(--speed, 2s) linear infinite; }
+.pl__ring--a{ stroke: var(--c1); }
+.pl__ring--b{ animation-name: ringB; stroke: var(--c2); }
+.pl__ring--c{ animation-name: ringC; stroke: var(--c1); }
+.pl__ring--d{ animation-name: ringD; stroke: var(--c2); }
+
+/* textos */
+.spinner-texts{ display:flex; flex-direction:column; gap: 3px; min-width:0; }
+.spinner-title{
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -.02em;
+  font-size: 1.02rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.spinner-sub{
+  font-size: .88rem;
+  color: #64748b;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.spinner-pill{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(15,23,42,.04);
+  font-weight: 900;
+  color: #334155;
+}
+.spinner-dot{
+  width:8px; height:8px; border-radius: 999px;
+  background: var(--c1);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--c1) 55%, transparent);
+}
+
+/* presets de cor */
+.spinner-ibs  { --c1: var(--ibs);  --c2: color-mix(in srgb, var(--ibs) 60%, #38bdf8); }
+.spinner-cbs  { --c1: var(--cbs);  --c2: color-mix(in srgb, var(--cbs) 60%, #4ade80); }
+.spinner-cred { --c1: var(--cred); --c2: color-mix(in srgb, var(--cred) 60%, #fbbf24); }
+.spinner-total{ --c1: var(--total);--c2: color-mix(in srgb, var(--total) 60%, #a855f7); }
+
+/* ===== ANIMAÇÕES do Uiverse (NAWSOME) ===== */
+@keyframes ringA{
+  from,4%{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-330}
+  12%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-335}
+  32%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-595}
+  40%,54%{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-660}
+  62%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-665}
+  82%{stroke-dasharray:60 600;stroke-width:30;stroke-dashoffset:-925}
+  90%,to{stroke-dasharray:0 660;stroke-width:20;stroke-dashoffset:-990}
+}
+@keyframes ringB{
+  from,12%{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-110}
+  20%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-115}
+  40%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-195}
+  48%,62%{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-220}
+  70%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-225}
+  90%{stroke-dasharray:20 200;stroke-width:30;stroke-dashoffset:-305}
+  98%,to{stroke-dasharray:0 220;stroke-width:20;stroke-dashoffset:-330}
+}
+@keyframes ringC{
+  from{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:0}
+  8%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-5}
+  28%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-175}
+  36%,58%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-220}
+  66%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-225}
+  86%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-395}
+  94%,to{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-440}
+}
+@keyframes ringD{
+  from,8%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:0}
+  16%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-5}
+  36%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-175}
+  44%,50%{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-220}
+  58%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-225}
+  78%{stroke-dasharray:40 400;stroke-width:30;stroke-dashoffset:-395}
+  86%,to{stroke-dasharray:0 440;stroke-width:20;stroke-dashoffset:-440}
+}
+
+
+/* ===== UIVERSE UPLOADER (mantém seu tema/cores) ===== */
+
+/* “container” do uploader */
+.uiverse-uploader section[data-testid="stFileUploaderDropzone"]{
+  height: 300px !important;
+  border-radius: 14px !important;
+  box-shadow: 4px 4px 30px rgba(0,0,0,.20) !important;
+  padding: 12px !important;
+  gap: 8px !important;
+  background: rgba(37,99,235,.06) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+/* “header” (área tracejada) */
+.uiverse-uploader section[data-testid="stFileUploaderDropzone"] > div{
+  flex: 1 !important;
+  width: 100% !important;
+  border: 2px dashed rgba(59,130,246,.55) !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-direction: column !important;
+  background: rgba(255,255,255,.04) !important;
+  padding: 14px !important;
+}
+
+/* Esconde o ícone padrão do Streamlit */
+.uiverse-uploader section[data-testid="stFileUploaderDropzone"] svg{
+  display:none !important;
+}
+
+/* Ícone novo (cloud upload) */
+.uiverse-uploader section[data-testid="stFileUploaderDropzone"] > div::before{
+  content:"";
+  width: 92px;
+  height: 92px;
+  display:block;
+  margin-bottom: 10px;
+  background-repeat:no-repeat;
+  background-size:contain;
+  filter: drop-shadow(0 10px 24px rgba(37,99,235,.25));
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25'/><polyline points='16 16 12 12 8 16'/><line x1='12' y1='12' x2='12' y2='21'/></svg>");
+}
+
+/* Texto do dropzone */
+.uiverse-uploader section[data-testid="stFileUploaderDropzone"] *{
+  text-align:center !important;
+}
+
+/* “footer” (barra inferior + botão) */
+.uiverse-uploader section[data-testid="stFileUploaderDropzone"] button{
+  width: 100% !important;
+  height: 42px !important;
+  margin-top: 10px !important;
+  border-radius: 12px !important;
+  background: rgba(37,99,235,.10) !important;
+  border: 1px solid rgba(59,130,246,.28) !important;
+  color: rgba(226,232,240,.92) !important;
+  font-weight: 900 !important;
+  box-shadow: 0 2px 30px rgba(0,0,0,.18) !important;
+}
+
+.uiverse-uploader section[data-testid="stFileUploaderDropzone"] button:hover{
+  filter: brightness(1.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Mantém seu estilo escuro da sidebar */
+section[data-testid="stSidebar"] .uiverse-uploader section[data-testid="stFileUploaderDropzone"]{
+  background: rgba(255,255,255,.06) !important;
+}
+
+
+/* ===== FILE UPLOADER DA SIDEBAR – UIVERSE STYLE ===== */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] {
+  height: 300px !important;
+  border-radius: 14px !important;
+  box-shadow: 4px 4px 30px rgba(0,0,0,.20) !important;
+  padding: 12px !important;
+  background: rgba(37,99,235,.06) !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] > div {
+  flex: 1 !important;
+  width: 100% !important;
+  border: 2px dashed rgba(59,130,246,.55) !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-direction: column !important;
+  background: rgba(255,255,255,.04) !important;
+}
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] svg {
+  display: none !important;
+}
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] > div::before {
+  content: "";
+  width: 92px;
+  height: 92px;
+  margin-bottom: 10px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 10px 24px rgba(37,99,235,.25));
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>\
+<path d='M20 16.58A5 5 0 0 0 18 7h-1.26A8 8 0 1 0 4 15.25'/>\
+<polyline points='16 16 12 12 8 16'/>\
+<line x1='12' y1='12' x2='12' y2='21'/>\
+</svg>");
+}
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] * {
+  text-align: center !important;
+}
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] button {
+  width: 100% !important;
+  height: 42px !important;
+  border-radius: 12px !important;
+  background: rgba(37,99,235,.10) !important;
+  border: 1px solid rgba(59,130,246,.28) !important;
+  font-weight: 900 !important;
+}
+
+
+/* ===== UPLOADER SIDEBAR – INTERATIVO (UX PREMIUM) ===== */
+
+/* Mais compacto */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"]{
+  height: 180px !important;
+  padding: 10px !important;
+  border-radius: 16px !important;
+  transition: background .22s ease, border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+}
+
+/* Área tracejada */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"] > div{
+  padding: 10px !important;
+  border-radius: 14px !important;
+}
+
+/* Esconde ícone padrão */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"] svg{
+  display: none !important;
+}
+
+/* Ícone cloud (tamanho + transição) */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"] > div::before{
+  width: 44px !important;
+  height: 44px !important;
+  margin-bottom: 6px !important;
+  transition: transform .22s ease, filter .22s ease, opacity .22s ease;
+  transform: translateY(0) scale(1);
+  opacity: .92;
+  filter: drop-shadow(0 6px 14px rgba(37,99,235,.22));
+}
+
+/* Hover: “chama” o usuário */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"]:hover{
+  background: rgba(37,99,235,.10) !important;
+  border-color: rgba(59,130,246,.55) !important;
+  box-shadow: 0 18px 45px rgba(2,6,23,.18), 0 0 0 1px rgba(59,130,246,.20), 0 0 22px rgba(59,130,246,.20) !important;
+  transform: translateY(-1px);
+}
+
+/* Ícone: pulse no hover */
+@keyframes uploadPulse {
+  0%   { transform: translateY(0) scale(1); }
+  50%  { transform: translateY(-2px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"]:hover > div::before{
+  animation: uploadPulse .9s ease-in-out infinite;
+  opacity: 1;
+  filter: drop-shadow(0 10px 22px rgba(37,99,235,.34));
+}
+
+/* Clique: feedback */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"]:active > div::before{
+  animation: none !important;
+  transform: translateY(1px) scale(.96) !important;
+  filter: drop-shadow(0 4px 10px rgba(37,99,235,.25)) !important;
+}
+
+/* Texto mais compacto */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"] p,
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"] small,
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"] span{
+  font-size: .82rem !important;
+  line-height: 1.15 !important;
+  margin: 2px 0 !important;
+  text-align: center !important;
+}
+
+/* Botão compacto */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"] button{
+  height: 34px !important;
+  padding: 6px 10px !important;
+  font-size: .88rem !important;
+  border-radius: 12px !important;
+}
+
+/* Quando já tem arquivo: troca ícone para check verde */
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"]:has([data-testid="stFileUploaderFile"]){
+  border-color: rgba(34,197,94,.55) !important;
+  box-shadow: 0 18px 45px rgba(2,6,23,.18), 0 0 0 1px rgba(34,197,94,.18), 0 0 22px rgba(34,197,94,.18) !important;
+}
+
+section[data-testid="stSidebar"]
+section[data-testid="stFileUploaderDropzone"]:has([data-testid="stFileUploaderFile"]) > div::before{
+  animation: none !important;
+  background-image: url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>\
+<polyline points='20 6 9 17 4 12'/>\
+</svg>") !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 10px 22px rgba(34,197,94,.40)) !important;
+}
+
 </style>
 """
 
 st.markdown(CSS, unsafe_allow_html=True)
+
+# -----------------------------
+# Spinner overlay (4 cores)
+# -----------------------------
+spinner_placeholder = st.empty()
+
+def spinner_html(tipo: str, titulo: str, subtitulo: str, speed: str = "2s") -> str:
+    # Remove *qualquer* indentação para evitar o Markdown transformar em bloco de código
+    raw = dedent(f"""<div class="spinner-overlay">
+<div class="spinner-card spinner-{tipo}" style="--speed:{speed}">
+<svg class="pl" viewBox="0 0 240 240" aria-hidden="true">
+<circle class="pl__ring pl__ring--a" cx="120" cy="120" r="105" fill="none" stroke-width="20"/>
+<circle class="pl__ring pl__ring--b" cx="120" cy="120" r="35"  fill="none" stroke-width="20"/>
+<circle class="pl__ring pl__ring--c" cx="120" cy="120" r="70"  fill="none" stroke-width="20"/>
+<circle class="pl__ring pl__ring--d" cx="120" cy="120" r="105" fill="none" stroke-width="20"/>
+</svg>
+<div class="spinner-texts">
+<div class="spinner-title">{titulo}</div>
+<div class="spinner-sub">
+<span class="spinner-pill"><span class="spinner-dot"></span>{subtitulo}</span>
+</div>
+</div>
+</div>
+</div>""")
+    return "\n".join(line.lstrip() for line in raw.splitlines() if line.strip())
+
+def show_spinner(tipo: str, titulo: str, subtitulo: str, speed: str = "2s") -> None:
+    spinner_placeholder.markdown(spinner_html(tipo, titulo, subtitulo, speed), unsafe_allow_html=True)
+
+def hide_spinner() -> None:
+    spinner_placeholder.empty()
+
+
+# Spinner overlay (neon) – usado durante upload/processamento
+spinner_placeholder = st.empty()
+SPINNER_HTML = dedent("""
+<div class="spinner-overlay">
+  <div class="spinner-wrapper">
+    <div class="spinner"></div>
+    <div class="spinner1"></div>
+  </div>
+</div>
+""")
+
 
 # -----------------------------
 # XML helpers
@@ -754,11 +1164,12 @@ with st.sidebar:
 </div>
 
 <div class="uploader-box">
-<div style="text-align:center; font-weight:800; margin-bottom: 6px;">Arraste e solte</div>
-<div style="text-align:center; color: rgba(226,232,240,.75); font-size:.82rem;">ou clique para selecionar</div>
-<div style="margin-top:10px;"></div>
 """), unsafe_allow_html=True)
+
+    st.markdown('<div class="uiverse-uploader">', unsafe_allow_html=True)
     xml_files = st.file_uploader("XML(s)", type=["xml", "zip"], accept_multiple_files=True, label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown(dedent("""
 <div class="uploader-help">XML, ZIP • Múltiplos</div>
 </div>
@@ -806,7 +1217,11 @@ if template_bytes is None:
 # Parse XMLs
 rows_all: list[dict] = []
 errors: list[str] = []
+
 if xml_files:
+    # Mostra spinner enquanto processa uploads (XML/ZIP)
+    spinner_placeholder.markdown(SPINNER_HTML, unsafe_allow_html=True)
+
     for f in xml_files:
         try:
             b = f.read()
@@ -829,6 +1244,9 @@ if xml_files:
                 rows_all.extend(rows)
         except Exception as e:
             errors.append(f"{f.name}: erro ao ler ({e})")
+
+    # Remove spinner ao terminar
+    spinner_placeholder.empty()
 
 df = pd.DataFrame(rows_all)
 
@@ -1169,14 +1587,37 @@ if template_bytes is None:
     st.error("Não encontrei **planilha_modelo.xlsx** na mesma pasta do app.py.")
 else:
     if st.button("Gerar planilha", type="primary"):
-        out_bytes = _append_to_workbook(template_bytes, df_view)
+        try:
+            # 🔵 IBS
+            show_spinner(tipo="ibs", titulo="Processando IBS…", subtitulo="Organizando bases", speed="1.6s")
+            time.sleep(0.25)
 
-        st.success("Planilha gerada! Abra no Excel para ver as fórmulas calculando.")
+            # 🟢 CBS
+            show_spinner(tipo="cbs", titulo="Processando CBS…", subtitulo="Calculando valores", speed="1.4s")
+            time.sleep(0.25)
 
-        st.download_button(
-            "Baixar planilha_preenchida.xlsx",
-            data=out_bytes,
-            file_name="planilha_preenchida.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+            # 🟠 Créditos
+            show_spinner(tipo="cred", titulo="Aplicando créditos…", subtitulo="Ajustando compensações", speed="1.2s")
+            time.sleep(0.25)
+
+            # 🟣 Total / exportação
+            show_spinner(tipo="total", titulo="Gerando planilha…", subtitulo="Aplicando fórmulas e estilos", speed="1.0s")
+
+            out_bytes = _append_to_workbook(template_bytes, df_view)
+
+        except Exception as e:
+            # Garante que o overlay não esconda o erro
+            hide_spinner()
+            st.error("Erro ao gerar a planilha. Veja os detalhes abaixo:")
+            st.exception(e)
+        else:
+            hide_spinner()
+            st.success("Planilha gerada! Abra no Excel para ver as fórmulas calculando.")
+
+            st.download_button(
+                "Baixar planilha_preenchida.xlsx",
+                data=out_bytes,
+                file_name="planilha_preenchida.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
 
