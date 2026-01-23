@@ -992,15 +992,19 @@ section[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] button:hover
 }
 
 
-/* ===== OCULTAR BARRA SUPERIOR / MENU STREAMLIT (modo app) ===== */
-header[data-testid="stHeader"]{ display:none !important; }
-div[data-testid="stToolbar"]{ display:none !important; }
-#MainMenu{ display:none !important; }
-footer{ display:none !important; }
-/* remove o espaço do header */
-.stApp .block-container{ padding-top: 0.8rem !important; }
+/* ===== OCULTAR BOTÃO "Gerenciar aplicativo" ===== */
+a[aria-label="Gerenciar aplicativo"],
+button[aria-label="Gerenciar aplicativo"],
+div:has(> a[aria-label="Gerenciar aplicativo"]) {
+    display: none !important;
+}
 
-\n/* esconder botão Deploy (quando aparece) */\ndiv[data-testid="stDeployButton"]{display:none !important;}\n</style>
+/* fallback: esconde qualquer botão fixo no canto inferior direito */
+div[style*="position: fixed"][style*="bottom"] {
+    display: none !important;
+}
+
+</style>
 """
 
 st.markdown(CSS, unsafe_allow_html=True)
