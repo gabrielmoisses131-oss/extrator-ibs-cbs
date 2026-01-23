@@ -991,7 +991,16 @@ section[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] button:hover
   background: rgba(255,255,255,.12) !important;
 }
 
-</style>
+
+/* ===== OCULTAR BARRA SUPERIOR / MENU STREAMLIT (modo app) ===== */
+header[data-testid="stHeader"]{ display:none !important; }
+div[data-testid="stToolbar"]{ display:none !important; }
+#MainMenu{ display:none !important; }
+footer{ display:none !important; }
+/* remove o espaço do header */
+.stApp .block-container{ padding-top: 0.8rem !important; }
+
+\n/* esconder botão Deploy (quando aparece) */\ndiv[data-testid="stDeployButton"]{display:none !important;}\n</style>
 """
 
 st.markdown(CSS, unsafe_allow_html=True)
