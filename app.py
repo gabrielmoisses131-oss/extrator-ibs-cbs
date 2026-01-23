@@ -992,33 +992,26 @@ section[data-testid="stSidebar"] [data-testid="stFileUploaderFile"] button:hover
 }
 
 
-/* ===== UI CLEAN (ocultar toolbar/topbar/menu + gerenciar aplicativo) ===== */
+/* ===== HARDEN UI (ocultar tudo que for chrome do Streamlit) ===== */
 header[data-testid="stHeader"]{display:none !important;}
 div[data-testid="stToolbar"]{display:none !important;}
 div[data-testid="stDecoration"]{display:none !important;}
 #MainMenu{display:none !important;}
 footer{display:none !important;}
 div[data-testid="stDeployButton"]{display:none !important;}
+button[title="View fullscreen"], button[title="Exit fullscreen"]{display:none !important;}
+/* alguns builds usam esses wrappers */
+div[class*="stAppToolbar"], div[class*="stToolbar"]{display:none !important;}
 
-/* remove espaço do header */
+/* remove espaço superior deixado pelo header */
 .stApp .block-container{padding-top: 1rem !important;}
 
-/* Streamlit Cloud: botões no canto (Gerenciar aplicativo, etc.) 
-   Usa seletores amplos pra cobrir variações de versão */
-a[aria-label*="Gerenciar"], button[aria-label*="Gerenciar"],
-a[aria-label*="Manage"], button[aria-label*="Manage"]{
-  display:none !important;
-}
+/* Streamlit Cloud/Share/Manage: remove qualquer widget FIXO no canto inferior direito */
+div[style*="position: fixed"][style*="bottom"][style*="right"]{display:none !important;}
+div[style*="position:fixed"][style*="bottom"][style*="right"]{display:none !important;}
 
-/* Fallback: qualquer “pill” fixo no canto inferior direito */
-div[style*="position: fixed"][style*="bottom"][style*="right"]{
-  display:none !important;
-}
-
-/* Outro fallback comum: containers fixos */
-div[class*="stAppToolbar"], div[class*="stAppViewer"], div[class*="st-emotion-cache"][style*="position: fixed"][style*="bottom"]{
-  display:none !important;
-}
+/* Remover qualquer overlay de “status”/toast do Streamlit */
+div[data-testid="stToast"]{display:none !important;}
 
 </style>
 """
