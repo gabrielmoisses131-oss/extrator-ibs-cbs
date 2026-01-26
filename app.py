@@ -16,6 +16,7 @@ import xml.etree.ElementTree as ET
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import html
 import time
 from openpyxl import load_workbook
@@ -1051,70 +1052,13 @@ div[data-testid="stToast"]{display:none !important;}
 }
 .card:hover .bar-fill{ transform: scaleX(1.03); }
 
-/* ===== Upload: borda tracejada animada (loading) ===== */
-
-/* Remove bordas internas do Streamlit */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"],
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] > div,
-section[data-testid="stSidebar"] section[data-testid="stFileUploader"]{
-  border: none !important;
-  outline: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
+/* ===== Upload: esconder Browse + card inteiro clicável ===== */
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button,
+section[data-testid="stSidebar"] [data-testid="stFileUploader"] button{
+  display: none !important;
 }
-
-/* Container do uploader */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]{
-  position: relative !important;
-  border-radius: 16px !important;
-  overflow: hidden !important;
-}
-
-/* Borda animada */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]::before{
-  content: "";
-  position: absolute;
-  inset: 10px;
-  border-radius: 14px;
-  border: 2px dashed rgba(59,130,246,.65);
-  pointer-events: none;
-  animation: dashMove 1.2s linear infinite;
-  box-shadow:
-    0 0 0 1px rgba(59,130,246,.15),
-    0 0 22px rgba(59,130,246,.12);
-}
-
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]:hover::before{
-  border-color: rgba(59,130,246,.9);
-  box-shadow:
-    0 0 0 1px rgba(59,130,246,.25),
-    0 0 36px rgba(59,130,246,.2);
-}
-
-@keyframes dashMove{
-  to { border-dashoffset: -16px; }
-}
-
-/* ===== FIX FINAL: botão Browse não cria linha dupla ===== */
-section[data-testid="stSidebar"] button[kind="secondary"]{
-  margin-top: 12px !important;
-  border: 1px solid rgba(59,130,246,.35) !important;
-  box-shadow: none !important;
-  border-radius: 14px !important;
-}
-
-/* ===== FIX (v2): botão Browse do uploader não “cola” na borda ===== */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] button{
-  margin-top: 14px !important;
-  transform: translateY(10px) !important;
-  border: 1px solid rgba(59,130,246,.28) !important;
-  box-shadow: none !important;
-  border-radius: 14px !important;
-}
-
-/* dá um respiro extra no container do uploader */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]{
-  padding-bottom: 12px !important;
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"]{
+  cursor: pointer !important;
 }
 
 </style>
@@ -1298,6 +1242,29 @@ def _parse_tax_totals_from_xml(xml_bytes: bytes) -> dict:
     vCOF = _find_text(root, ".//{*}ICMSTot/{*}vCOFINS")
 
     return {"vICMS": _to_float(vICMS), "vPIS": _to_float(vPIS), "vCOFINS": _to_float(vCOF)}
+
+
+def _detect_cancel_event(xml_bytes: bytes) -> dict | None:
+    """Detecta XML de evento de cancelamento (procEventoNFe / evento).
+    Retorna dict com dados úteis ou None se não for cancelamento.
+    """
+    try:
+        root = ET.fromstring(xml_bytes)
+    except Exception:
+        return None
+
+    # Procura tpEvento=110111 (Cancelamento)
+    tp = _find_text(root, ".//{*}detEvento/{*}tpEvento") or _find_text(root, ".//{*}tpEvento")
+    if tp != "110111":
+        return None
+
+    ch = _find_text(root, ".//{*}infEvento/{*}chNFe") or _find_text(root, ".//{*}chNFe") or ""
+    dh = _find_text(root, ".//{*}infEvento/{*}dhEvento") or _find_text(root, ".//{*}dhEvento") or ""
+    nprot = _find_text(root, ".//{*}infEvento/{*}nProt") or _find_text(root, ".//{*}nProt") or ""
+    xjust = _find_text(root, ".//{*}detEvento/{*}xJust") or _find_text(root, ".//{*}xJust") or ""
+
+    return {"chNFe": ch, "dhEvento": dh, "nProt": nprot, "xJust": xjust}
+
 
 
 # -----------------------------
@@ -1490,70 +1457,13 @@ st.markdown("""
 @media(max-width:820px){
   .header-top{flex-direction:column;align-items:flex-start;}
 }
-/* ===== Upload: borda tracejada animada (loading) ===== */
-
-/* Remove bordas internas do Streamlit */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"],
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] > div,
-section[data-testid="stSidebar"] section[data-testid="stFileUploader"]{
-  border: none !important;
-  outline: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
+/* ===== Upload: esconder Browse + card inteiro clicável ===== */
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button,
+section[data-testid="stSidebar"] [data-testid="stFileUploader"] button{
+  display: none !important;
 }
-
-/* Container do uploader */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]{
-  position: relative !important;
-  border-radius: 16px !important;
-  overflow: hidden !important;
-}
-
-/* Borda animada */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]::before{
-  content: "";
-  position: absolute;
-  inset: 10px;
-  border-radius: 14px;
-  border: 2px dashed rgba(59,130,246,.65);
-  pointer-events: none;
-  animation: dashMove 1.2s linear infinite;
-  box-shadow:
-    0 0 0 1px rgba(59,130,246,.15),
-    0 0 22px rgba(59,130,246,.12);
-}
-
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]:hover::before{
-  border-color: rgba(59,130,246,.9);
-  box-shadow:
-    0 0 0 1px rgba(59,130,246,.25),
-    0 0 36px rgba(59,130,246,.2);
-}
-
-@keyframes dashMove{
-  to { border-dashoffset: -16px; }
-}
-
-/* ===== FIX FINAL: botão Browse não cria linha dupla ===== */
-section[data-testid="stSidebar"] button[kind="secondary"]{
-  margin-top: 12px !important;
-  border: 1px solid rgba(59,130,246,.35) !important;
-  box-shadow: none !important;
-  border-radius: 14px !important;
-}
-
-/* ===== FIX (v2): botão Browse do uploader não “cola” na borda ===== */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] button{
-  margin-top: 14px !important;
-  transform: translateY(10px) !important;
-  border: 1px solid rgba(59,130,246,.28) !important;
-  box-shadow: none !important;
-  border-radius: 14px !important;
-}
-
-/* dá um respiro extra no container do uploader */
-section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]{
-  padding-bottom: 12px !important;
+section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"]{
+  cursor: pointer !important;
 }
 
 </style>
@@ -1614,7 +1524,26 @@ with st.sidebar:
 """), unsafe_allow_html=True)
 
     st.markdown('<div class="uiverse-uploader">', unsafe_allow_html=True)
-    xml_files = st.file_uploader("XML(s)", type=["xml", "zip"], accept_multiple_files=True, label_visibility="collapsed")
+    xml_files = st.file_uploader("", type=["xml","zip"], accept_multiple_files=True, label_visibility="collapsed")
+    components.html(
+        '''
+    <script>
+    (function(){
+      function hook(){
+        const dz = window.parent.document.querySelector('[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"]');
+        if(!dz) return;
+        dz.addEventListener('click', function(){
+          const input = dz.querySelector('input[type="file"]');
+          if(input) input.click();
+        });
+      }
+      hook();
+      setTimeout(hook, 800);
+    })();
+    </script>
+        ''',
+        height=0,
+    )
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(dedent("""
@@ -1664,6 +1593,7 @@ if template_bytes is None:
 # Parse XMLs
 rows_all: list[dict] = []
 errors: list[str] = []
+cancelados: list[dict] = []
 
 # Acumuladores por NOTA (ICMSTot)
 icms_total_all = 0.0
@@ -1697,12 +1627,23 @@ if xml_files:
                         cofins_total_all += tot["vCOFINS"]
                         rows = _parse_items_from_xml(xb, f"{f.name}:{xn}")
                         if not rows:
+                            ce = _detect_cancel_event(xb)
+                            if ce is not None:
+                                ce["arquivo"] = f"{f.name}:{xn}"
+                                cancelados.append(ce)
+                                # evento de cancelamento não possui itens/IBSCBS
+                                continue
                             errors.append(f"{f.name}:{xn}: não encontrei itens com IBSCBS")
                         rows_all.extend(rows)
             else:
                 rows = _parse_items_from_xml(b, f.name)
                 if not rows:
-                    errors.append(f"{f.name}: não encontrei itens com IBSCBS")
+                    ce = _detect_cancel_event(b)
+                    if ce is not None:
+                        ce["arquivo"] = f.name
+                        cancelados.append(ce)
+                    else:
+                        errors.append(f"{f.name}: não encontrei itens com IBSCBS")
                 rows_all.extend(rows)
         except Exception as e:
             errors.append(f"{f.name}: erro ao ler ({e})")
@@ -1823,11 +1764,9 @@ base_cbs = float(df["Valor da operação"].fillna(0).sum()) if (not df.empty and
 ibs_total = round(base_ibs, 2)
 cbs_total = round(base_cbs, 2)
 total_tributos = round(icms_total_all, 2)
-
-# Créditos: 1% sobre UMA base (IBS ou CBS)
-creditos_total = round(base_ibs * 0.01, 2)
-
-
+# Créditos: Totais reais do XML (somatório de vIBS e vCBS)
+creditos_ibs_total = round(float(df["vIBS"].fillna(0).sum()) if (not df.empty and "vIBS" in df.columns) else 0.0, 2)
+creditos_cbs_total = round(float(df["vCBS"].fillna(0).sum()) if (not df.empty and "vCBS" in df.columns) else 0.0, 2)
 # --- KPI clique (filtro via query param) ---
 try:
     _qp = st.query_params.get("kpi", "all")
@@ -1901,8 +1840,9 @@ st.markdown(
           </svg>
         </div>
       </div>
-      <div class="value">{money(creditos_total)}</div>
-      <div class="sub">Somatório de vIBS + vCBS</div>
+      <div class="sub" style="margin-top:6px; font-weight:900; color:#f59e0b;">IBS: {money(creditos_ibs_total)}</div>
+      <div class="sub" style="margin-top:6px; font-weight:900; color:#f59e0b;">CBS: {money(creditos_cbs_total)}</div>
+      <div class="sub" style="margin-top:8px;">Totais extraídos de <b>vIBS</b> e <b>vCBS</b> (XML)</div>
     </div>
   </a>
 
@@ -2002,8 +1942,20 @@ with c2:
 st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
 
 # Alerts
+if cancelados:
+    st.info(f"✅ {len(cancelados)} arquivo(s) são eventos de **cancelamento** e foram ignorados (não possuem itens/IBSCBS).")
+    with st.expander("Ver cancelamentos detectados"):
+        for c in cancelados[:20]:
+            ch = c.get("chNFe", "") or "-"
+            arq = c.get("arquivo", "") or "-"
+            nprot = c.get("nProt", "") or "-"
+            dh = (c.get("dhEvento", "") or "-")[:19].replace("T", " ")
+            st.write(f"• {arq} | chNFe: {ch} | nProt: {nprot} | dhEvento: {dh}")
+        if len(cancelados) > 20:
+            st.caption(f"... e mais {len(cancelados)-20} cancelamentos")
+
 if errors:
-    st.warning("Alguns arquivos tiveram problemas:")
+    st.warning("⚠️ Alguns arquivos não possuem bloco IBSCBS (ou não são NFe/NFC-e de itens):")
     for e in errors[:10]:
         st.write("•", e)
     if len(errors) > 10:
