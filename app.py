@@ -1013,6 +1013,110 @@ div[style*="position:fixed"][style*="bottom"][style*="right"]{display:none !impo
 /* Remover qualquer overlay de “status”/toast do Streamlit */
 div[data-testid="stToast"]{display:none !important;}
 
+
+/* ===== MICRO-INTERAÇÕES (premium | gira e para) ===== */
+
+/* Base (efeito mola) */
+.kpi .kpi-icon, .card .icon{
+  transition: filter 0.35s ease;
+  will-change: filter;
+}
+.kpi .kpi-icon svg, .card .icon svg{
+  display: block;
+  transform-origin: 50% 50%;
+  transition: transform 0.75s cubic-bezier(.22,1.28,.42,1);
+  will-change: transform;
+}
+
+/* Hover: gira UMA vez e para (bem visível) */
+.kpi:hover .kpi-icon svg{
+  transform: rotate(180deg) scale(1.08);
+}
+.card:hover .icon svg{
+  transform: rotate(160deg) scale(1.06);
+}
+
+/* Glow suave */
+.kpi:hover .kpi-icon{
+  filter: drop-shadow(0 0 14px rgba(99,102,241,.35));
+}
+.card:hover .icon{
+  filter: drop-shadow(0 0 12px rgba(99,102,241,.25));
+}
+
+/* Micro movimento na barra */
+.card .bar-fill{
+  transform-origin: left center;
+  transition: transform .35s ease;
+}
+.card:hover .bar-fill{ transform: scaleX(1.03); }
+
+/* ===== Upload: borda tracejada animada (loading) ===== */
+
+/* Remove bordas internas do Streamlit */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"],
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] > div,
+section[data-testid="stSidebar"] section[data-testid="stFileUploader"]{
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Container do uploader */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]{
+  position: relative !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+/* Borda animada */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]::before{
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 14px;
+  border: 2px dashed rgba(59,130,246,.65);
+  pointer-events: none;
+  animation: dashMove 1.2s linear infinite;
+  box-shadow:
+    0 0 0 1px rgba(59,130,246,.15),
+    0 0 22px rgba(59,130,246,.12);
+}
+
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]:hover::before{
+  border-color: rgba(59,130,246,.9);
+  box-shadow:
+    0 0 0 1px rgba(59,130,246,.25),
+    0 0 36px rgba(59,130,246,.2);
+}
+
+@keyframes dashMove{
+  to { border-dashoffset: -16px; }
+}
+
+/* ===== FIX FINAL: botão Browse não cria linha dupla ===== */
+section[data-testid="stSidebar"] button[kind="secondary"]{
+  margin-top: 12px !important;
+  border: 1px solid rgba(59,130,246,.35) !important;
+  box-shadow: none !important;
+  border-radius: 14px !important;
+}
+
+/* ===== FIX (v2): botão Browse do uploader não “cola” na borda ===== */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] button{
+  margin-top: 14px !important;
+  transform: translateY(10px) !important;
+  border: 1px solid rgba(59,130,246,.28) !important;
+  box-shadow: none !important;
+  border-radius: 14px !important;
+}
+
+/* dá um respiro extra no container do uploader */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]{
+  padding-bottom: 12px !important;
+}
+
 </style>
 """
 
@@ -1386,6 +1490,72 @@ st.markdown("""
 @media(max-width:820px){
   .header-top{flex-direction:column;align-items:flex-start;}
 }
+/* ===== Upload: borda tracejada animada (loading) ===== */
+
+/* Remove bordas internas do Streamlit */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"],
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] > div,
+section[data-testid="stSidebar"] section[data-testid="stFileUploader"]{
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Container do uploader */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]{
+  position: relative !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+/* Borda animada */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]::before{
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 14px;
+  border: 2px dashed rgba(59,130,246,.65);
+  pointer-events: none;
+  animation: dashMove 1.2s linear infinite;
+  box-shadow:
+    0 0 0 1px rgba(59,130,246,.15),
+    0 0 22px rgba(59,130,246,.12);
+}
+
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]:hover::before{
+  border-color: rgba(59,130,246,.9);
+  box-shadow:
+    0 0 0 1px rgba(59,130,246,.25),
+    0 0 36px rgba(59,130,246,.2);
+}
+
+@keyframes dashMove{
+  to { border-dashoffset: -16px; }
+}
+
+/* ===== FIX FINAL: botão Browse não cria linha dupla ===== */
+section[data-testid="stSidebar"] button[kind="secondary"]{
+  margin-top: 12px !important;
+  border: 1px solid rgba(59,130,246,.35) !important;
+  box-shadow: none !important;
+  border-radius: 14px !important;
+}
+
+/* ===== FIX (v2): botão Browse do uploader não “cola” na borda ===== */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"] button{
+  margin-top: 14px !important;
+  transform: translateY(10px) !important;
+  border: 1px solid rgba(59,130,246,.28) !important;
+  box-shadow: none !important;
+  border-radius: 14px !important;
+}
+
+/* dá um respiro extra no container do uploader */
+section[data-testid="stSidebar"] section[data-testid="stFileUploaderDropzone"]{
+  padding-bottom: 12px !important;
+}
+
 </style>
 
 <div class="header-container">
