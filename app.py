@@ -1170,6 +1170,32 @@ def _parse_items_from_xml(xml_bytes: bytes, filename: str) -> list[dict]:
 
     return rows
 
+
+
+def _parse_tax_totals_from_xml(xml_bytes: bytes) -> dict:
+    """Extrai totais do XML (por NOTA) via ICMSTot:
+    - vICMS (ICMS próprio)
+    - vPIS
+    - vCOFINS
+    """
+    try:
+        root = ET.fromstring(xml_bytes)
+    except Exception:
+        return {"vICMS": 0.0, "vPIS": 0.0, "vCOFINS": 0.0}
+
+    def _to_float(x: str | None) -> float:
+        try:
+            return float(x) if x not in (None, "") else 0.0
+        except Exception:
+            return 0.0
+
+    vICMS = _find_text(root, ".//{*}ICMSTot/{*}vICMS")
+    vPIS = _find_text(root, ".//{*}ICMSTot/{*}vPIS")
+    vCOF = _find_text(root, ".//{*}ICMSTot/{*}vCOFINS")
+
+    return {"vICMS": _to_float(vICMS), "vPIS": _to_float(vPIS), "vCOFINS": _to_float(vCOF)}
+
+
 # -----------------------------
 # Excel write helper
 # -----------------------------
@@ -1422,6 +1448,11 @@ if template_bytes is None:
 rows_all: list[dict] = []
 errors: list[str] = []
 
+# Acumuladores por NOTA (ICMSTot)
+icms_total_all = 0.0
+pis_total_all = 0.0
+cofins_total_all = 0.0
+
 if xml_files:
     # Mostra spinner enquanto processa uploads (XML/ZIP)
     spinner_placeholder.markdown(SPINNER_HTML, unsafe_allow_html=True)
@@ -1429,6 +1460,12 @@ if xml_files:
     for f in xml_files:
         try:
             b = f.read()
+            # Totais por NOTA (somente quando for XML direto)
+            if not f.name.lower().endswith(".zip"):
+                tot0 = _parse_tax_totals_from_xml(b)
+                icms_total_all += tot0["vICMS"]
+                pis_total_all += tot0["vPIS"]
+                cofins_total_all += tot0["vCOFINS"]
             if f.name.lower().endswith(".zip"):
                 with zipfile.ZipFile(io.BytesIO(b)) as z:
                     xml_names = [n for n in z.namelist() if n.lower().endswith(".xml")]
@@ -1437,6 +1474,10 @@ if xml_files:
                         continue
                     for xn in xml_names:
                         xb = z.read(xn)
+                        tot = _parse_tax_totals_from_xml(xb)
+                        icms_total_all += tot["vICMS"]
+                        pis_total_all += tot["vPIS"]
+                        cofins_total_all += tot["vCOFINS"]
                         rows = _parse_items_from_xml(xb, f"{f.name}:{xn}")
                         if not rows:
                             errors.append(f"{f.name}:{xn}: não encontrei itens com IBSCBS")
@@ -1564,7 +1605,7 @@ base_cbs = float(df["Valor da operação"].fillna(0).sum()) if (not df.empty and
 # Totais exibidos nos cards = soma das bases
 ibs_total = round(base_ibs, 2)
 cbs_total = round(base_cbs, 2)
-total_tributos = round(base_ibs + base_cbs, 2)
+total_tributos = round(icms_total_all, 2)
 
 # Créditos: 1% sobre UMA base (IBS ou CBS)
 creditos_total = round(base_ibs * 0.01, 2)
@@ -1652,8 +1693,8 @@ st.markdown(
     <div class="kpi kpi-total {'is-active' if selected_kpi=='total' else ''}">
       <div class="kpi-head">
         <div>
-          <div class="label">Total Tributos</div>
-          <div class="pill">↗ Consolidado</div>
+          <div class="label">ICMS Total</div>
+          <div class="pill">↗ ICMS</div>
         </div>
         <div class="kpi-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none">
@@ -1664,7 +1705,7 @@ st.markdown(
         </div>
       </div>
       <div class="value">{money(total_tributos)}</div>
-      <div class="sub">IBS base + CBS base</div>
+      <div class="sub">Somatório de ICMS (ICMSTot)</div>
     </div>
   </a>
 </div>
@@ -1675,55 +1716,36 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-# Painéis (estilo Figma) — Débitos vs Créditos
+# Painéis (estilo Figma) — Totais por XML (ICMSTot)
 c1, c2 = st.columns(2, gap="large")
-ibs_deb = float(ibs_total or 0.0)
-cbs_deb = float(cbs_total or 0.0)
-ibs_cred = 0.0
-cbs_cred = 0.0
 
-def _bar_width(val, vmax):
-    if vmax <= 0:
-        return "0%"
-    return f"{max(0.0, min(1.0, val / vmax)) * 100:.1f}%"
-
-max_ibs = max(ibs_deb, ibs_cred, 1e-9)
-max_cbs = max(cbs_deb, cbs_cred, 1e-9)
+pis_total = float(pis_total_all or 0.0)
+cofins_total = float(cofins_total_all or 0.0)
 
 with c1:
     st.markdown(
         f"""
 <div class="card ibs-panel">
   <div class="panel-title">
-<div class="panel-left">
-<div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M4 18V6" stroke="#334155" stroke-width="1.7" stroke-linecap="round"/>
-        <path d="M4 18h16" stroke="#334155" stroke-width="1.7" stroke-linecap="round"/>
-        <path d="M8 14l3-3 3 2 4-5" stroke="#2563eb" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-</div>
-<div>
-      <h3>IBS - Débitos vs Créditos</h3>
-<div class="hint">Imposto sobre Bens e Serviços (Estados/Municípios)</div>
-</div>
-</div>
-<span class="badge on">Ativo</span>
+    <div class="panel-left">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 18V6" stroke="#334155" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M4 18h16" stroke="#334155" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M8 14l3-3 3 2 4-5" stroke="#2563eb" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <h3>PIS - Total apurado</h3>
+        <div class="hint">Somatório de vPIS (ICMSTot) de todos os XML</div>
+      </div>
+    </div>
+    <span class="badge on">Ativo</span>
   </div>
 
-  <div class="bar-row">
-<div class="bar-label"><span>Débitos</span><span class="badge-money">{money(ibs_deb)}</span></div>
-<div class="bar-track"><div class="bar-fill ibs" style="width:{_bar_width(ibs_deb, max_ibs)}"></div></div>
-  </div>
-
-  <div class="bar-row">
-<div class="bar-label"><span>Créditos</span><span class="badge-money">-{money(ibs_cred)}</span></div>
-<div class="bar-track"><div class="bar-fill cred" style="width:{_bar_width(ibs_cred, max_ibs)}"></div></div>
-  </div>
-
-  <div class="bar-foot green">
-    <strong>Saldo a Recolher</strong>
-<span class="badge-money" style="color:#2563eb;">{money(ibs_deb - ibs_cred)}</span>
+  <div style="margin-top: 8px;">
+    <div class="bar-label"><span>Total</span><span class="badge-money">{money(pis_total)}</span></div>
+    <div class="bar-track"><div class="bar-fill ibs" style="width:100%"></div></div>
   </div>
 </div>
 """,
@@ -1735,41 +1757,30 @@ with c2:
         f"""
 <div class="card cbs-panel">
   <div class="panel-title">
-<div class="panel-left">
-<div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M4 18V6" stroke="#334155" stroke-width="1.7" stroke-linecap="round"/>
-        <path d="M4 18h16" stroke="#334155" stroke-width="1.7" stroke-linecap="round"/>
-        <path d="M8 14l3-3 3 2 4-5" stroke="#16a34a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-</div>
-<div>
-      <h3>CBS - Débitos vs Créditos</h3>
-<div class="hint">Contribuição sobre Bens e Serviços (União)</div>
-</div>
-</div>
-<span class="badge on" style="background:#ecfdf3;border-color:#dcfce7;color:#166534;">Ativo</span>
+    <div class="panel-left">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M4 18V6" stroke="#334155" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M4 18h16" stroke="#334155" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M8 14l3-3 3 2 4-5" stroke="#16a34a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div>
+        <h3>COFINS - Total apurado</h3>
+        <div class="hint">Somatório de vCOFINS (ICMSTot) de todos os XML</div>
+      </div>
+    </div>
+    <span class="badge on" style="background:#ecfdf3;border-color:#dcfce7;color:#166534;">Ativo</span>
   </div>
 
-  <div class="bar-row">
-<div class="bar-label"><span>Débitos</span><span class="badge-money">{money(cbs_deb)}</span></div>
-<div class="bar-track"><div class="bar-fill cbs" style="width:{_bar_width(cbs_deb, max_cbs)}"></div></div>
-  </div>
-
-  <div class="bar-row">
-<div class="bar-label"><span>Créditos</span><span class="badge-money">-{money(cbs_cred)}</span></div>
-<div class="bar-track"><div class="bar-fill cred" style="width:{_bar_width(cbs_cred, max_cbs)}"></div></div>
-  </div>
-
-  <div class="bar-foot">
-    <strong>Saldo a Recolher</strong>
-<span class="badge-money" style="color:#16a34a;">{money(cbs_deb - cbs_cred)}</span>
+  <div style="margin-top: 8px;">
+    <div class="bar-label"><span>Total</span><span class="badge-money">{money(cofins_total)}</span></div>
+    <div class="bar-track"><div class="bar-fill cbs" style="width:100%"></div></div>
   </div>
 </div>
 """,
         unsafe_allow_html=True,
     )
-
 
 st.markdown('<div class="hr"></div>', unsafe_allow_html=True)
 
