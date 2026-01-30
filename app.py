@@ -1067,6 +1067,23 @@ section[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"]{
 
 st.markdown(CSS, unsafe_allow_html=True)
 
+
+# -----------------------------
+# HTML helper (avoids Markdown code-block due to indentation)
+# -----------------------------
+def _html_block(s: str):
+    # Streamlit markdown treats leading 4 spaces as code block.
+    # Dedent and strip to guarantee HTML renders.
+    st.markdown(dedent(s).strip(), unsafe_allow_html=True)
+
+
+def _html_clean(s: str) -> str:
+    """Normaliza HTML para evitar que o Markdown do Streamlit transforme em bloco de código."""
+    raw = dedent(s)
+    lines = [ln.lstrip() for ln in raw.splitlines() if ln.strip()]
+    return "\n".join(lines)
+
+
 # -----------------------------
 # Spinner overlay (4 cores)
 # -----------------------------
@@ -1222,6 +1239,15 @@ def _parse_items_from_xml(xml_bytes: bytes, filename: str) -> list[dict]:
     dets = root.findall(".//{*}infNFe/{*}det") or root.findall(".//{*}det")
     for det in dets:
         xprod = _find_text(det, ".//{*}prod/{*}xProd") or ""
+        # Componentes do item (para validação por subtração)
+        vprod = _find_text(det, ".//{*}prod/{*}vProd")
+        vdesc = _find_text(det, ".//{*}prod/{*}vDesc")
+
+        # Tributos por ITEM (quando existirem)
+        vicms_item = _find_text(det, ".//{*}imposto/{*}ICMS//{*}vICMS")
+        vpis_item = _find_text(det, ".//{*}imposto/{*}PIS//{*}vPIS")
+        vcof_item = _find_text(det, ".//{*}imposto/{*}COFINS//{*}vCOFINS")
+
         ibscbs = det.find(".//{*}imposto/{*}IBSCBS")
         if ibscbs is None:
             # alguns XML podem não ter IBSCBS -> ignora item
@@ -1234,13 +1260,28 @@ def _parse_items_from_xml(xml_bytes: bytes, filename: str) -> list[dict]:
 
         def _to_float(x: str | None):
             try:
-                return float(x) if x not in (None, "") else None
+                if x in (None, ""):
+                    return None
+                # suporta vírgula decimal
+                s = str(x).strip().replace(",", ".")
+                return float(s)
             except Exception:
                 return None
+
+        def _to_float0(x: str | None) -> float:
+            v = _to_float(x)
+            return float(v) if v is not None else 0.0
 
         vbc_f = _to_float(vbc)
         vibs_f = _to_float(vibs)
         vcbs_f = _to_float(vcbs)
+
+        # Componentes para validação por subtração (sempre em float)
+        vprod_f = _to_float0(vprod)
+        vdesc_f = _to_float0(vdesc)
+        vicms_item_f = _to_float0(vicms_item)
+        vpis_item_f = _to_float0(vpis_item)
+        vcof_item_f = _to_float0(vcof_item)
 
         # Fonte do valor (base)
         fonte = "IBSCBS/vBC" if vbc_f is not None else ""
@@ -1254,6 +1295,11 @@ def _parse_items_from_xml(xml_bytes: bytes, filename: str) -> list[dict]:
                 "Valor da operação": vbc_f,
                 "vIBS": vibs_f,
                 "vCBS": vcbs_f,
+                "vProd": vprod_f,
+                "vDesc": vdesc_f,
+                "vICMS_item": vicms_item_f,
+                "vPIS_item": vpis_item_f,
+                "vCOFINS_item": vcof_item_f,
                 "arquivo": filename,
                 "Fonte do valor": fonte,
             }
@@ -1285,6 +1331,242 @@ def _parse_tax_totals_from_xml(xml_bytes: bytes) -> dict:
     vCOF = _find_text(root, ".//{*}ICMSTot/{*}vCOFINS")
 
     return {"vICMS": _to_float(vICMS), "vPIS": _to_float(vPIS), "vCOFINS": _to_float(vCOF)}
+
+
+# ============================
+# Validação Premium IBS/CBS
+# Regra: Base Calc = vProd − vDesc − vICMS_item − vPIS_item − vCOFINS_item
+# Zero tolerância: precisa bater exatamente (0,00).
+# ============================
+
+TOLERANCIA_BASE_IBSCBS = 0.0  # ZERO TOLERÂNCIA
+
+def _br_money(v: float) -> str:
+    try:
+        s = f"{float(v):,.2f}"
+        return s.replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return "0,00"
+
+def _safe_num(x) -> float:
+    try:
+        if x in (None, ""):
+            return 0.0
+        if isinstance(x, str):
+            x = x.strip().replace(".", "").replace(",", ".")
+        return float(x)
+    except Exception:
+        return 0.0
+
+def aplicar_validacao_base_ibscbs(df_itens: pd.DataFrame) -> pd.DataFrame:
+    """Adiciona colunas de validação IBS/CBS (por item)."""
+    df = df_itens.copy()
+
+    # Base do XML já vem em 'Valor da operação' (IBSCBS/vBC) no seu app
+    if "Valor da operação" in df.columns:
+        base_xml = df["Valor da operação"].fillna(0).apply(_safe_num)
+    else:
+        base_xml = pd.Series([0.0]*len(df), index=df.index)
+
+    vProd = df.get("vProd", 0)
+    vDesc = df.get("vDesc", 0)
+    vICMS = df.get("vICMS_item", 0)
+    vPIS = df.get("vPIS_item", 0)
+    vCOF = df.get("vCOFINS_item", 0)
+
+    vProd = pd.Series(vProd).fillna(0).apply(_safe_num)
+    vDesc = pd.Series(vDesc).fillna(0).apply(_safe_num)
+    vICMS = pd.Series(vICMS).fillna(0).apply(_safe_num)
+    vPIS  = pd.Series(vPIS).fillna(0).apply(_safe_num)
+    vCOF  = pd.Series(vCOF).fillna(0).apply(_safe_num)
+
+    base_calc = (vProd - vDesc - vICMS - vPIS - vCOF).round(2)
+    dif = (base_calc - base_xml).round(2)
+
+    status = dif.apply(lambda d: "OK" if abs(d) <= TOLERANCIA_BASE_IBSCBS else "Divergente")
+
+    df["Base IBS/CBS (XML)"] = base_xml.round(2)
+    df["Base IBS/CBS (Calc)"] = base_calc
+    df["Dif Base IBS/CBS"] = dif
+    df["Status Base IBS/CBS"] = status
+
+    # Diagnóstico curto (premium)
+    def _diag(row):
+        if row["Status Base IBS/CBS"] == "OK":
+            return "✓ Base bateu exatamente (0,00)"
+        # Se calc zerou mas XML > 0: normalmente faltam tributos por item (ou vProd não veio)
+        if row["Base IBS/CBS (Calc)"] == 0 and row["Base IBS/CBS (XML)"] > 0:
+            return "Componentes do item vieram 0,00 (ver vProd/vDesc/tributos por item)"
+        return "Base do XML não bate com a decomposição do item (subtração)"
+
+    df["Diagnóstico Base IBS/CBS"] = df.apply(_diag, axis=1)
+
+    return df
+
+
+def render_painel_validacao_premium(df_validado: pd.DataFrame, *, key_prefix: str = "ibscbs"):
+    """Retângulo premium com resumo + cálculo detalhado.
+
+    ✅ Fix:
+    - Dropdown pode mostrar só divergentes
+    - Painel de detalhe renderiza via components.html (não vira texto/código)
+    - Botão para exportar apenas divergentes
+    - Card fica vermelho quando item selecionado está divergente
+    """
+    if df_validado is None or len(df_validado) == 0:
+        return
+
+    # CSS premium (injetado uma vez)
+    _html_block("""
+<style>
+    .ibscbs-panel{background:linear-gradient(180deg,rgba(255,255,255,.96) 0%,rgba(255,255,255,.88) 100%);border:1px solid rgba(148,163,184,.35);border-radius:18px;padding:18px;box-shadow:0 18px 56px rgba(15,23,42,.10);backdrop-filter:blur(10px)}
+    .ibscbs-panel.divergente{border-color:rgba(239,68,68,.30);box-shadow:0 18px 56px rgba(15,23,42,.10), 0 0 0 1px rgba(239,68,68,.20), 0 0 26px rgba(239,68,68,.14)}
+    .ibscbs-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .ibscbs-title{display:flex;align-items:flex-start;gap:10px}
+    .ibscbs-title h3{margin:0;font-size:16px;font-weight:800;color:#0f172a;letter-spacing:-.2px}
+    .ibscbs-title p{margin:3px 0 0 0;font-size:12px;color:#64748b;max-width:820px}
+    .ibscbs-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid transparent;white-space:nowrap}
+    .ibscbs-chip.ok{color:#15803d;background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.24)}
+    .ibscbs-chip.bad{color:#b91c1c;background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.24)}
+    .ibscbs-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:10px;margin-bottom:14px}
+    .ibscbs-metric{background:rgba(248,250,252,.90);border:1px solid rgba(226,232,240,.95);border-radius:14px;padding:12px}
+    .ibscbs-metric .k{font-size:12px;color:#64748b;margin:0}
+    .ibscbs-metric .v{font-size:18px;font-weight:900;color:#0f172a;margin:6px 0 0 0}
+    .ibscbs-metric .s{font-size:11px;color:#94a3b8;margin:6px 0 0 0}
+    .ibscbs-divider{height:1px;background:rgba(226,232,240,.95);margin:14px 0}
+    .ibscbs-calc{display:grid;grid-template-columns:1.25fr .75fr;gap:12px}
+    .ibscbs-formula{background:rgba(15,23,42,.04);border:1px solid rgba(148,163,184,.25);border-radius:14px;padding:12px}
+    .ibscbs-formula .label{font-size:12px;font-weight:800;color:#334155;margin:0 0 8px 0}
+    .ibscbs-eq{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;color:#0f172a;line-height:1.55;margin:0;white-space:pre-wrap;word-break:break-word}
+    .ibscbs-right{background:rgba(248,250,252,.92);border:1px solid rgba(226,232,240,.95);border-radius:14px;padding:12px}
+    .ibscbs-right .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0}
+    .ibscbs-right .row span{font-size:12px;color:#64748b}
+    .ibscbs-right .row b{font-size:13px;color:#0f172a}
+    .ibscbs-right .delta{margin-top:10px;padding-top:10px;border-top:1px dashed rgba(148,163,184,.4)}
+    .ibscbs-foot{margin-top:10px;font-size:11px;color:#94a3b8}
+    @media (max-width:900px){.ibscbs-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.ibscbs-calc{grid-template-columns:1fr}}
+</style>
+    """)
+
+    total = len(df_validado)
+    ok = int((df_validado["Status Base IBS/CBS"] == "OK").sum())
+    div = total - ok
+
+    soma_xml = float(df_validado["Base IBS/CBS (XML)"].sum())
+    soma_calc = float(df_validado["Base IBS/CBS (Calc)"].sum())
+    delta_total = round(soma_calc - soma_xml, 2)
+
+    status_global_ok = (div == 0)
+    chip = "ok" if status_global_ok else "bad"
+    chip_txt = "✓ Validado (0,00)" if status_global_ok else f"⚠ Divergências ({div})"
+
+    # Exportar só divergentes
+    df_div = df_validado[df_validado["Status Base IBS/CBS"] != "OK"].copy()
+    if not df_div.empty:
+        csv_div = df_div.to_csv(index=False, sep=';', encoding='utf-8')
+        st.download_button(
+            "⬇️ Baixar somente divergentes (CSV)",
+            data=csv_div,
+            file_name="divergentes_ibscbs.csv",
+            mime="text/csv",
+            key=f"{key_prefix}_dl_div"
+        )
+
+    # Dropdown: por padrão, só divergentes quando existir
+    show_only_div = st.checkbox(
+        "Mostrar somente as divergentes",
+        value=(not df_div.empty),
+        key=f"{key_prefix}_onlydiv",
+        help="Filtra o seletor e mostra apenas itens com Status = Divergente."
+    )
+
+    df_tmp = df_validado.copy()
+    if show_only_div:
+        df_tmp = df_tmp[df_tmp["Status Base IBS/CBS"] != "OK"].copy()
+
+    if df_tmp.empty:
+        st.success("✅ Nenhuma divergência encontrada. (Tudo OK)")
+        return
+
+    df_tmp["_absdif"] = df_tmp["Dif Base IBS/CBS"].abs()
+    df_tmp = df_tmp.sort_values("_absdif", ascending=False)
+
+    label_col = "Item/Serviço" if "Item/Serviço" in df_tmp.columns else df_tmp.columns[0]
+    options = df_tmp[label_col].fillna("").astype(str).tolist()
+
+    pick = st.selectbox(
+        "Detalhar cálculo (selecione um item)",
+        options=options,
+        index=0,
+        key=f"{key_prefix}_pick",
+        help="Mostra a decomposição do item: vProd − vDesc − ICMS_item − PIS_item − COFINS_item."
+    )
+
+    row = df_tmp[df_tmp[label_col].astype(str) == str(pick)].iloc[0]
+
+    vProd = _safe_num(row.get("vProd"))
+    vDesc = _safe_num(row.get("vDesc"))
+    vICMS = _safe_num(row.get("vICMS_item"))
+    vPIS  = _safe_num(row.get("vPIS_item"))
+    vCOF  = _safe_num(row.get("vCOFINS_item"))
+
+    base_xml = float(row["Base IBS/CBS (XML)"])
+    base_calc = float(row["Base IBS/CBS (Calc)"])
+    dif = float(row["Dif Base IBS/CBS"])
+
+    status_item = "OK" if abs(dif) <= TOLERANCIA_BASE_IBSCBS else "Divergente"
+    panel_class = "ibscbs-panel" + (" divergente" if status_item != "OK" else "")
+    formula = (
+        f"vProd ({_br_money(vProd)})  −  vDesc ({_br_money(vDesc)})  −  ICMS ({_br_money(vICMS)})  −  PIS ({_br_money(vPIS)})  −  COFINS ({_br_money(vCOF)})\n"
+        f"= Base Calc ({_br_money(base_calc)})"
+    )
+
+    panel = f"""
+<div class="{panel_class}">
+  <div class="ibscbs-header">
+    <div class="ibscbs-title">
+      <div style="font-size:18px;">🧾</div>
+      <div>
+        <h3>Validação da Base IBS/CBS (ZERO tolerância)</h3>
+        <p>Validação por subtração (item a item). A base calculada deve bater exatamente com a base do XML (IBSCBS/vBC). Qualquer centavo vira divergência.</p>
+      </div>
+    </div>
+    <div class="ibscbs-chip {chip}">{chip_txt}</div>
+  </div>
+
+  <div class="ibscbs-metrics">
+    <div class="ibscbs-metric"><p class="k">Itens</p><p class="v">{total}</p><p class="s">Total analisado</p></div>
+    <div class="ibscbs-metric"><p class="k">Soma Base (XML)</p><p class="v">R$ {_br_money(soma_xml)}</p><p class="s">Total do XML</p></div>
+    <div class="ibscbs-metric"><p class="k">Soma Base (Calc)</p><p class="v">R$ {_br_money(soma_calc)}</p><p class="s">Subtração por item</p></div>
+    <div class="ibscbs-metric"><p class="k">Diferença</p><p class="v">R$ {_br_money(delta_total)}</p><p class="s">Calc − XML</p></div>
+  </div>
+
+  <div class="ibscbs-divider"></div>
+
+  <div class="ibscbs-calc">
+    <div class="ibscbs-formula">
+      <p class="label">Cálculo detalhado</p>
+      <pre class="ibscbs-eq">{formula}</pre>
+    </div>
+
+    <div class="ibscbs-right">
+      <div class="row"><span>Base XML</span><b>R$ {_br_money(base_xml)}</b></div>
+      <div class="row"><span>Base Calc</span><b>R$ {_br_money(base_calc)}</b></div>
+      <div class="row"><span>Diferença</span><b>R$ {_br_money(dif)}</b></div>
+
+      <div class="delta">
+        <div class="row"><span>Status do item</span><b>{status_item}</b></div>
+        <div class="row"><span>Arquivo</span><b>{_h(row.get('arquivo',''))}</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ibscbs-foot">Regra rígida: diferença precisa ser <b>0,00</b>. Qualquer centavo vira divergência.</div>
+</div>
+"""
+
+    # Render no corpo do Streamlit (aplicando CSS do app) sem virar texto.
+    st.markdown(_html_clean(panel), unsafe_allow_html=True)
 
 
 def _detect_cancel_event(xml_bytes: bytes) -> dict | None:
@@ -2082,6 +2364,15 @@ if selected_kpi != "all":
         df_view = df_view[(vibs < 0) | (vcbs < 0)]
     elif selected_kpi == "total" and (vibs is not None and vcbs is not None):
         df_view = df_view[(vibs != 0) | (vcbs != 0)]
+
+
+# ---------- Validação Premium IBS/CBS (retângulo) ----------
+try:
+    df_validado = aplicar_validacao_base_ibscbs(df_view)
+    render_painel_validacao_premium(df_validado, key_prefix="ibscbs")
+except Exception as _e:
+    st.warning(f"Não foi possível renderizar a validação IBS/CBS: {_e}")
+
 
 show_cols = ["Data", "Numero", "Item/Serviço", "cClassTrib", "Valor da operação", "vIBS", "vCBS", "arquivo", "Fonte do valor"]
 show_cols = [c for c in show_cols if c in df_view.columns]
