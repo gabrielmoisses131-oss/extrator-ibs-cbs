@@ -1607,6 +1607,39 @@ def render_painel_validacao_premium(df_validado: pd.DataFrame, *, key_prefix: st
   font-weight:950;
   color:#0f172a;
 }
+
+/* ===== Pulse (apenas no hover) para os ícones do cálculo ===== */
+@keyframes calcPulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
+}
+.calc-line .name i{
+  transition: transform .22s cubic-bezier(.22,1,.36,1), box-shadow .22s ease, filter .22s ease;
+  will-change: transform, box-shadow, filter;
+}
+.calc-line:hover .name i{
+  animation: calcPulse .45s ease-out 1;
+}
+
+/* Glow por tipo (combina com seu design) */
+.calc-line.minus:hover .name i{
+  box-shadow: 0 0 18px rgba(245,158,11,.35);
+  filter: drop-shadow(0 0 12px rgba(245,158,11,.28));
+}
+.calc-line.icms:hover .name i{
+  box-shadow: 0 0 18px rgba(37,99,235,.35);
+  filter: drop-shadow(0 0 12px rgba(37,99,235,.28));
+}
+.calc-line.pis:hover .name i{
+  box-shadow: 0 0 18px rgba(124,58,237,.35);
+  filter: drop-shadow(0 0 12px rgba(124,58,237,.28));
+}
+.calc-line.cof:hover .name i{
+  box-shadow: 0 0 18px rgba(22,163,74,.35);
+  filter: drop-shadow(0 0 12px rgba(22,163,74,.28));
+}
+
 .calc-line.minus .name i{ border-color: rgba(245,158,11,.25); background: rgba(245,158,11,.10); }
 .calc-line.icms .name i{ border-color: rgba(37,99,235,.25); background: rgba(37,99,235,.10); }
 .calc-line.pis  .name i{ border-color: rgba(124,58,237,.25); background: rgba(124,58,237,.10); }
@@ -1814,6 +1847,7 @@ def render_painel_validacao_premium(df_validado: pd.DataFrame, *, key_prefix: st
 
     <div class="delta">
       <div class="row {('status-ok' if status_item=='OK' else 'status-bad')}"><span>Status do item</span><b>{status_item}</b></div>
+      <div class="row"><span>Nº da nota</span><b>{_h(str(row.get('Numero','') or ''))}</b></div>
       <div class="row"><span>Arquivo</span><b>{_h(row.get('arquivo',''))}</b></div>
     </div>
   </div>
