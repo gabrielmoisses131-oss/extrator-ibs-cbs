@@ -19,6 +19,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import html
 import time
+import hashlib
 from openpyxl import load_workbook
 from textwrap import dedent
 
@@ -1097,7 +1098,6 @@ def show_spinner(tipo: str, titulo: str, subtitulo: str, speed: str = "2s") -> N
 def hide_spinner() -> None:
     spinner_placeholder.empty()
 
-
 # Spinner overlay (neon) – usado durante upload/processamento
 spinner_placeholder = st.empty()
 SPINNER_HTML = dedent("""
@@ -1158,6 +1158,49 @@ def _parse_nnf(root: ET.Element) -> str | None:
         if t:
             return t
     return None
+
+
+def _extract_nfe_key(xml_bytes: bytes) -> str:
+    """Tenta extrair a chave (44 dígitos) da NFe/NFCe.
+    - Prioriza Id do infNFe (ex.: Id="NFe3519...")
+    - Fallback para tags chNFe comuns em protNFe/infProt ou eventos.
+    Retorna "" se não encontrar.
+    """
+    try:
+        root = ET.fromstring(xml_bytes)
+    except Exception:
+        return ""
+
+    # 1) infNFe @Id (mais comum)
+    inf = root.find(".//{*}infNFe")
+    if inf is not None:
+        idv = inf.attrib.get("Id") or inf.attrib.get("id") or ""
+        digits = "".join(ch for ch in idv if ch.isdigit())
+        if len(digits) >= 44:
+            return digits[-44:]
+
+    # 2) chNFe em protocolos
+    ch = (
+        _find_text(root, ".//{*}protNFe/{*}infProt/{*}chNFe")
+        or _find_text(root, ".//{*}infProt/{*}chNFe")
+        or _find_text(root, ".//{*}chNFe")
+        or ""
+    )
+    ch_digits = "".join(chh for chh in ch if chh.isdigit())
+    if len(ch_digits) >= 44:
+        return ch_digits[-44:]
+    return ""
+
+
+def _xml_signature(xml_bytes: bytes) -> str:
+    """Assinatura estável para deduplicação:
+    - Se achar chave, usa chave (melhor)
+    - Senão, usa hash do conteúdo (sha1)
+    """
+    chave = _extract_nfe_key(xml_bytes)
+    if chave:
+        return f"ch:{chave}"
+    return "sha1:" + hashlib.sha1(xml_bytes).hexdigest()
 
 def _parse_items_from_xml(xml_bytes: bytes, filename: str) -> list[dict]:
     """
@@ -1604,9 +1647,21 @@ if xml_files:
     # Mostra spinner enquanto processa uploads (XML/ZIP)
     spinner_placeholder.markdown(SPINNER_HTML, unsafe_allow_html=True)
 
+    seen_xml_sigs: set[str] = set()
+    dupes_ignored = 0
+    xml_processed = 0
+
     for f in xml_files:
         try:
             b = f.read()
+            # Deduplicação: evita processar o mesmo XML mais de uma vez
+            if not f.name.lower().endswith(".zip"):
+                sig = _xml_signature(b)
+                if sig in seen_xml_sigs:
+                    dupes_ignored += 1
+                    continue
+                seen_xml_sigs.add(sig)
+                xml_processed += 1
             # Totais por NOTA (somente quando for XML direto)
             if not f.name.lower().endswith(".zip"):
                 tot0 = _parse_tax_totals_from_xml(b)
@@ -1615,12 +1670,18 @@ if xml_files:
                 cofins_total_all += tot0["vCOFINS"]
             if f.name.lower().endswith(".zip"):
                 with zipfile.ZipFile(io.BytesIO(b)) as z:
-                    xml_names = [n for n in z.namelist() if n.lower().endswith(".xml")]
+                    xml_names = sorted(set(n for n in z.namelist() if n.lower().endswith(".xml")))
                     if not xml_names:
                         errors.append(f"{f.name}: zip sem .xml")
                         continue
                     for xn in xml_names:
                         xb = z.read(xn)
+                        sig = _xml_signature(xb)
+                        if sig in seen_xml_sigs:
+                            dupes_ignored += 1
+                            continue
+                        seen_xml_sigs.add(sig)
+                        xml_processed += 1
                         tot = _parse_tax_totals_from_xml(xb)
                         icms_total_all += tot["vICMS"]
                         pis_total_all += tot["vPIS"]
@@ -1650,6 +1711,9 @@ if xml_files:
 
     # Remove spinner ao terminar
     spinner_placeholder.empty()
+
+    if dupes_ignored:
+        st.info(f"🔁 {dupes_ignored} XML(s) foram ignorados por duplicidade (mesma chave/conteúdo).")
 
 df = pd.DataFrame(rows_all)
 
